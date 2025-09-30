@@ -17,9 +17,10 @@ const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
 
-// 初始化用户状态
+// 初始化用户状态（只在有JWT令牌时尝试恢复）
 const userStore = useUserStore()
-userStore.getLoginUser()
+// 尝试从token恢复用户信息
+userStore.initUserFromToken()
 
 app.use(router)
 app.use(ArcoVue)

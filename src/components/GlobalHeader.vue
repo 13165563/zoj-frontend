@@ -7,28 +7,24 @@
           <span class="logo-text">ZOJ</span>
         </div>
       </div>
-      
+
       <!-- 导航菜单 -->
-      <a-menu 
-        class="nav-menu" 
-        mode="horizontal" 
+      <a-menu
+        class="nav-menu"
+        mode="horizontal"
         :selected-keys="selectedKeys"
         @menu-item-click="handleMenuClick"
       >
-        <a-menu-item 
-          v-for="route in visibleRoutes" 
-          :key="route.path"
-          :data-path="route.path"
-        >
+        <a-menu-item v-for="route in visibleRoutes" :key="route.path" :data-path="route.path">
           {{ route.name }}
         </a-menu-item>
       </a-menu>
-      
+
       <!-- 用户信息区域 -->
       <div class="user-actions">
         <div v-if="!userStore.isLoggedIn" class="login-actions">
           <a-button type="outline" @click="goToLogin">登录</a-button>
-          <a-button type="primary" @click="goToRegister" style="margin-left: 10px;">注册</a-button>
+          <a-button type="primary" @click="goToRegister" style="margin-left: 10px">注册</a-button>
         </div>
         <div v-else class="user-info">
           <a-dropdown>
@@ -36,12 +32,8 @@
               {{ getUserInitial }}
             </a-avatar>
             <template #content>
-              <a-doption @click="goToProfile">
-                <icon-user /> 个人中心
-              </a-doption>
-              <a-doption @click="handleLogout">
-                <icon-export /> 退出登录
-              </a-doption>
+              <a-doption @click="goToProfile"> <icon-user /> 个人中心 </a-doption>
+              <a-doption @click="handleLogout"> <icon-export /> 退出登录 </a-doption>
             </template>
           </a-dropdown>
         </div>
@@ -59,6 +51,7 @@ import checkAccess from '@/access/checkAccess'
 import ACCESS_ENUM from '@/access/accessEnum'
 import { userLogout as userLogoutApi } from '@/api/user/userApi'
 import { Message } from '@arco-design/web-vue'
+import { JwtUtils } from '@/utils/jwt'
 
 const router = useRouter()
 const route = useRoute()
@@ -76,12 +69,12 @@ const visibleRoutes = computed(() => {
     if (route.meta?.hideInMenu) {
       return false
     }
-    
+
     // 根据权限过滤路由
     if (route.meta?.access) {
       return checkAccess(userStore.loginUser, route.meta.access)
     }
-    
+
     // 默认显示
     return true
   })
@@ -103,18 +96,17 @@ watch(
     // 用户状态变化时，强制组件更新
     console.log('用户状态发生变化:', newUser, oldUser)
   },
-  { deep: true }
+  { deep: true },
 )
 
 // 监听路由变化，确保用户状态是最新的
 watch(
   () => route.path,
   async () => {
-    // 每次路由变化时检查用户登录状态
-    if (userStore.isLoggedIn) {
-      await userStore.checkLoginStatus()
-    }
-  }
+    // 暂时禁用路由变化时的状态检查，避免频繁调用后端API
+    // 如果需要检查登录状态，可以在用户主动操作时进行
+    console.log('路由变化:', route.path, '用户登录状态:', userStore.isLoggedIn)
+  },
 )
 
 // 处理菜单点击事件
@@ -145,34 +137,24 @@ const goToProfile = () => {
 // 处理用户登出
 const handleLogout = async () => {
   try {
-    const res = await userLogoutApi()
-    // 无论API调用结果如何，都执行登出操作
+    // JWT认证模式下，前端直接清除令牌即可
     userStore.logout()
-    
-    if (res && res.data && res.data.code === 0) {
-      Message.success('登出成功')
-    } else {
-      // 即使API返回错误，我们也认为登出在前端是成功的
-      Message.success('登出成功')
-    }
-    
+    Message.success('登出成功')
+
     // 跳转到首页
     router.push('/')
-    // 强制更新组件状态
-    userStore.$patch({})
   } catch (error: any) {
-    // 即使出现网络错误，也执行登出操作以确保用户状态正确
+    // 即使出错，也执行登出操作
     userStore.logout()
     Message.success('登出成功')
     router.push('/')
-    userStore.$patch({})
   }
 }
 
 // 组件挂载时检查用户登录状态
 onMounted(async () => {
-  // 如果用户已登录，验证登录状态是否仍然有效
-  if (userStore.isLoggedIn) {
+  // 如果用户已登录且不在登录页面，验证登录状态是否仍然有效
+  if (userStore.isLoggedIn && route.path !== '/user/login' && route.path !== '/user/register') {
     await userStore.checkLoginStatus()
   }
 })

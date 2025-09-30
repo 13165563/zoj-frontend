@@ -32,3 +32,8 @@ export const listQuestionSubmitByPage = (data: QuestionSubmitQueryRequest) => {
 export const listQuestionSubmitVOByPage = (data: QuestionSubmitQueryRequest) => {
   return http.post<BaseResponse<Page<QuestionSubmitVO>>>('/question_submit/list/page/vo', data);
 };
+
+// 根据ID获取题目提交详情
+export const getQuestionSubmitVOById = (id: string) => {
+  return http.get<BaseResponse<QuestionSubmitVO>>(`/question_submit/get/vo?id=${id}`);
+};

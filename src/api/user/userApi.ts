@@ -10,6 +10,9 @@ import type {
   UserQueryRequest,
   UserVO,
   LoginUserVO,
+  UserAddRequest,
+  UserUpdateRequest,
+  DeleteRequest,
 } from './type';
 
 /**
@@ -24,6 +27,18 @@ export const userRegister = (data: UserRegisterRequest) => {
 // 用户登录
 export const userLogin = (data: UserLoginRequest) => {
   return http.post<BaseResponse<LoginUserVO>>('/user/login', data);
+};
+
+// 用户登录（JWT方式）
+export const userLoginJwt = (data: UserLoginRequest) => {
+  return http.post<BaseResponse<{ token: string; user: LoginUserVO }>>('/user/login/jwt', data);
+};
+
+// 验证JWT令牌
+export const validateJwtToken = (token: string) => {
+  return http.post<BaseResponse<{ userId: string; userAccount: string; userRole: string; user: LoginUserVO }>>('/user/validate/jwt', null, {
+    params: { token }
+  });
 };
 
 // 用户登出
@@ -61,12 +76,12 @@ export const listUserVOByPage = (data: UserQueryRequest) => {
 };
 
 // 添加用户
-export const addUser = (data: User) => {
+export const addUser = (data: UserAddRequest) => {
   return http.post<BaseResponse<number>>('/user/add', data);
 };
 
 // 更新用户
-export const updateUser = (data: User) => {
+export const updateUser = (data: UserUpdateRequest) => {
   return http.post<BaseResponse<boolean>>('/user/update', data);
 };
 
@@ -76,6 +91,11 @@ export const updateMyUser = (data: User) => {
 };
 
 // 删除用户
-export const deleteUser = (id: number) => {
-  return http.post<BaseResponse<boolean>>('/user/delete', { id });
+export const deleteUser = (data: DeleteRequest) => {
+  return http.post<BaseResponse<boolean>>('/user/delete', data);
+};
+
+// 获取用户列表（用于管理页面）
+export const getUserList = (data: UserQueryRequest) => {
+  return http.post<BaseResponse<Page<UserVO>>>('/user/list/page/vo', data);
 };

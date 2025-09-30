@@ -3,25 +3,13 @@
     <h1>题目提交记录</h1>
     <a-card>
       <!-- 搜索表单 -->
-      <a-form
-        :model="searchForm"
-        layout="inline"
-        @submit="handleSearch"
-      >
+      <a-form :model="searchForm" layout="inline" @submit="handleSearch">
         <a-form-item field="questionId" label="题目ID">
-          <a-input
-            v-model="searchForm.questionId"
-            placeholder="请输入题目ID"
-            allow-clear
-          />
+          <a-input v-model="searchForm.questionId" placeholder="请输入题目ID" allow-clear />
         </a-form-item>
-        
+
         <a-form-item field="userId" label="用户ID">
-          <a-input
-            v-model="searchForm.userId"
-            placeholder="请输入用户ID"
-            allow-clear
-          />
+          <a-input v-model="searchForm.userId" placeholder="请输入用户ID" allow-clear />
         </a-form-item>
 
         <a-form-item field="language" label="编程语言">
@@ -74,9 +62,7 @@
           </a-table-column>
           <a-table-column title="操作" :width="100" fixed="right">
             <template #cell="{ record }">
-              <a-button type="text" size="small" @click="viewSubmitDetail(record)">
-                查看
-              </a-button>
+              <a-button type="text" size="small" @click="viewSubmitDetail(record)"> 查看 </a-button>
             </template>
           </a-table-column>
         </template>
@@ -84,9 +70,9 @@
     </a-card>
 
     <!-- 判题详情弹窗 -->
-    <a-modal 
-      v-model:visible="detailModalVisible" 
-      :title="currentSubmitRecord ? ('提交详情 - ' + currentSubmitRecord.id) : '提交详情'"
+    <a-modal
+      v-model:visible="detailModalVisible"
+      :title="currentSubmitRecord ? '提交详情 - ' + currentSubmitRecord.id : '提交详情'"
       :width="800"
       @close="closeDetailModal"
     >
@@ -107,15 +93,15 @@
             {{ formatTime(currentSubmitRecord.createTime) }}
           </a-descriptions-item>
           <a-descriptions-item label="判题状态">
-            <a-tag :color="getJudgeStatusColor(currentSubmitRecord.judgeInfo?.status)">
-              {{ currentSubmitRecord.judgeInfo?.messageText || '未知状态' }}
+            <a-tag :color="getJudgeStatusColor(getJudgeStatus(currentSubmitRecord))">
+              {{ getJudgeStatusText(currentSubmitRecord) }}
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="时间消耗">
-            {{ currentSubmitRecord.judgeInfo?.time || 'N/A' }} ms
+            {{ getJudgeTime(currentSubmitRecord) }} ms
           </a-descriptions-item>
           <a-descriptions-item label="内存消耗">
-            {{ currentSubmitRecord.judgeInfo?.memory || 'N/A' }} KB
+            {{ getJudgeMemory(currentSubmitRecord) }} KB
           </a-descriptions-item>
           <a-descriptions-item label="题目时间限制">
             {{ currentSubmitRecord.questionVO?.judgeConfig?.timeLimit || 'N/A' }} ms
@@ -124,9 +110,18 @@
             {{ currentSubmitRecord.questionVO?.judgeConfig?.memoryLimit || 'N/A' }} KB
           </a-descriptions-item>
         </a-descriptions>
-        
+
         <a-card v-if="currentSubmitRecord" title="代码" style="margin-top: 20px">
-          <pre style="max-height: 300px; overflow: auto; background-color: #f5f5f5; padding: 10px; border-radius: 4px">{{ currentSubmitRecord.code }}</pre>
+          <pre
+            style="
+              max-height: 300px;
+              overflow: auto;
+              background-color: #f5f5f5;
+              padding: 10px;
+              border-radius: 4px;
+            "
+            >{{ currentSubmitRecord.code }}</pre
+          >
         </a-card>
       </a-spin>
     </a-modal>
@@ -137,7 +132,10 @@
 import { reactive, ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
-import { listQuestionSubmitVOByPage } from '@/api/questionSubmit/questionSubmitApi'
+import {
+  listQuestionSubmitVOByPage,
+  getQuestionSubmitVOById,
+} from '@/api/questionSubmit/questionSubmitApi'
 
 // 使用路由
 const router = useRouter()
@@ -146,7 +144,7 @@ const router = useRouter()
 const searchForm = reactive({
   questionId: '',
   userId: '',
-  language: ''
+  language: '',
 })
 
 // 提交记录列表
@@ -171,14 +169,14 @@ const pagination = reactive({
   total: 0,
   showTotal: true,
   showJumper: true,
-  showPageSize: true
+  showPageSize: true,
 })
 
 // 计算属性，确保total是数字类型
 const tablePagination = computed(() => {
   return {
     ...pagination,
-    total: Number(pagination.total)
+    total: Number(pagination.total),
   }
 })
 
@@ -187,6 +185,77 @@ const formatTime = (time: string | Date | undefined) => {
   if (!time) return ''
   const date = new Date(time)
   return date.toLocaleString()
+}
+
+// 获取判题状态（处理不同的数据结构）
+const getJudgeStatus = (record: any) => {
+  console.log('判题信息原始数据:', record.judgeInfo)
+
+  // 如果judgeInfo是字符串，尝试解析
+  if (typeof record.judgeInfo === 'string') {
+    try {
+      const parsed = JSON.parse(record.judgeInfo)
+      return parsed.status || record.status || 0
+    } catch (e) {
+      return record.status || 0
+    }
+  }
+
+  // 如果judgeInfo是对象
+  if (typeof record.judgeInfo === 'object' && record.judgeInfo !== null) {
+    return record.judgeInfo.status || record.status || 0
+  }
+
+  // 直接使用status字段
+  return record.status || 0
+}
+
+// 获取判题状态文本
+const getJudgeStatusText = (record: any) => {
+  const status = getJudgeStatus(record)
+  const statusMap = {
+    0: '等待中',
+    1: '判题中',
+    2: '成功',
+    3: '失败',
+  }
+  return statusMap[status] || '未知状态'
+}
+
+// 获取判题时间
+const getJudgeTime = (record: any) => {
+  if (typeof record.judgeInfo === 'string') {
+    try {
+      const parsed = JSON.parse(record.judgeInfo)
+      return parsed.time || 'N/A'
+    } catch (e) {
+      return 'N/A'
+    }
+  }
+
+  if (typeof record.judgeInfo === 'object' && record.judgeInfo !== null) {
+    return record.judgeInfo.time || 'N/A'
+  }
+
+  return 'N/A'
+}
+
+// 获取判题内存
+const getJudgeMemory = (record: any) => {
+  if (typeof record.judgeInfo === 'string') {
+    try {
+      const parsed = JSON.parse(record.judgeInfo)
+      return parsed.memory || 'N/A'
+    } catch (e) {
+      return 'N/A'
+    }
+  }
+
+  if (typeof record.judgeInfo === 'object' && record.judgeInfo !== null) {
+    return record.judgeInfo.memory || 'N/A'
+  }
+
+  return 'N/A'
 }
 
 // 获取判题状态对应的颜色
@@ -206,8 +275,31 @@ const getJudgeStatusColor = (status: number | undefined) => {
 }
 
 // 查看提交详情
-const viewSubmitDetail = (record: any) => {
-  currentSubmitRecord.value = record
+const viewSubmitDetail = async (record: any) => {
+  console.log('提交记录详情:', record)
+  console.log('代码字段:', record.code)
+  console.log('判题信息:', record.judgeInfo)
+
+  detailLoading.value = true
+  try {
+    // 重新请求详情接口获取完整信息
+    const res = await getQuestionSubmitVOById(record.id)
+    if (res.code === 0) {
+      currentSubmitRecord.value = res.data
+      console.log('详情接口返回的数据:', res.data)
+      console.log('详情接口返回的代码:', res.data.code)
+    } else {
+      Message.error(res.message || '获取提交详情失败')
+      return
+    }
+  } catch (err) {
+    Message.error('获取提交详情失败，请稍后重试')
+    console.error('获取提交详情失败:', err)
+    return
+  } finally {
+    detailLoading.value = false
+  }
+
   detailModalVisible.value = true
 }
 
@@ -254,7 +346,7 @@ const fetchSubmitList = async () => {
       userId: searchForm.userId ? Number(searchForm.userId) : undefined,
       language: searchForm.language || undefined,
       current: pagination.current,
-      pageSize: pagination.pageSize
+      pageSize: pagination.pageSize,
     })
 
     if (res.code === 0) {

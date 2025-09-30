@@ -12,9 +12,9 @@
 
       <a-form-item field="content" label="题目内容" required>
         <div class="editor-container">
-          <MdEditor 
-            v-model="form.content" 
-            :height="600" 
+          <MdEditor
+            v-model="form.content"
+            :height="600"
             mode="split"
           />
         </div>
@@ -380,11 +380,11 @@ const handleSubmit = async () => {
       });
     }
 
-    if (res.data.code === 0) {
+    if (res.code === 0) {
       Message.success(`${isUpdate.value ? '更新' : '创建'}题目成功`);
       router.push('/manage/question/');
     } else {
-      Message.error(res.data.message || `${isUpdate.value ? '更新' : '创建'}题目失败`);
+      Message.error(res.message || `${isUpdate.value ? '更新' : '创建'}题目失败`);
     }
   } catch (err: any) {
     Message.error(err.message || `${isUpdate.value ? '更新' : '创建'}题目失败`);
@@ -403,7 +403,7 @@ const fetchQuestionDetail = async (id: string | number) => {
       form.title = question.title || '';
       form.content = question.content || '';
       form.answer = question.answer || '';
-            
+
       // 处理标签
       if (question.tags) {
         try {
@@ -416,7 +416,7 @@ const fetchQuestionDetail = async (id: string | number) => {
           form.tags = [];
         }
       }
-      
+
       // 处理判题用例
       if (question.judgeCase) {
         try {
@@ -429,7 +429,7 @@ const fetchQuestionDetail = async (id: string | number) => {
           // 如果解析失败，保持默认值
         }
       }
-      
+
       // 处理判题配置
       if (question.judgeConfig) {
         try {
